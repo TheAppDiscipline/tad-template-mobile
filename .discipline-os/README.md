@@ -1,6 +1,6 @@
 # .discipline-os/ — Maintenance Automation (Discipline Loop)
 
-Scripts to keep solo-builder maintenance from becoming "intention without habit". See vault note `83 - Mantenimiento Solo` for doctrine.
+Scripts to keep solo-builder maintenance from becoming "intention without habit". The doctrine behind them lives in The App Discipline vault (sold separately).
 
 ## Setup
 
@@ -33,7 +33,7 @@ Add these entries to your `package.json` under `scripts`:
 
 ## Integration options
 
-- **Manual:** calendar reminder → run script → journal in `findings.md §Maintenance`.
+- **Manual:** calendar reminder -> run script -> journal in `findings.md §Maintenance`.
 - **EAS workflows:** for monthly/quarterly, wrap the scripts in an EAS workflow if you prefer CI-triggered runs.
 
 ## Windows compatibility

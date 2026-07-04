@@ -1,23 +1,23 @@
-# Maestro smoke flow para Mobile (iOS + Android).
+# Maestro smoke flow for Mobile (iOS + Android).
 #
-# Pre-requisitos:
-#   1. Maestro CLI instalado: https://maestro.mobile.dev/getting-started/installing-maestro
-#      (no es un paquete npm; es un binario que se instala con curl).
-#   2. Build de la app corriendo en simulador/emulador o device fisico:
+# Prerequisites:
+#   1. Maestro CLI installed: https://maestro.mobile.dev/getting-started/installing-maestro
+#      (not an npm package; it is a binary installed with curl).
+#   2. App build running on a simulator/emulator or physical device:
 #      iOS: `npx expo run:ios`
 #      Android: `npx expo run:android`
-#   3. Para iOS, el bundle id default es 'com.theappdiscipline.tadAppTemplateMobile'.
-#      Si lo cambiaste en app.json, ajusta el campo `appId` abajo.
+#   3. On iOS, the default bundle id is 'com.theappdiscipline.tadAppTemplateMobile'.
+#      If you changed it in app.json, adjust the `appId` field below.
 #
-# Uso:
+# Usage:
 #   maestro test .maestro/smoke.yaml
-#   o desde npm: npm run e2e
+#   or via npm: npm run e2e
 #
-# Limitaciones:
-#   - Smoke minimo. No prueba auth, sync, ni interacciones complejas.
-#   - El template arranca en un Stack vacio (HomeScreen retorna null), asi que el smoke
-#     solo verifica que la app carga sin crash. Cuando agregues UI en Slice 1, ajusta
-#     este flow para validar la UI real.
+# Limitations:
+#   - Minimal smoke. It does not test auth, sync, or complex interactions.
+#   - The template starts on an empty Stack (HomeScreen returns null), so the smoke
+#     only verifies the app launches without crashing. When you add UI in Slice 1, adjust
+#     this flow to validate the real UI.
 
 appId: com.theappdiscipline.app
 

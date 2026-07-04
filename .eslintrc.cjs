@@ -1,15 +1,15 @@
 // https://docs.expo.dev/guides/using-eslint/
 //
 // Discipline Loop Non-Negotiables enforced via ESLint:
-//   NN #11 AI Studio Lane   -> no-console (salvo warn/error)
-//   NN #18 Error Handling   -> no-empty (no catch {} vacios)
-//   NN #21 TypeScript Strict -> no-explicit-any (error), ban-ts-comment (require descripcion)
-//   NN #24 Accessibility    -> react-native-a11y/* (estatico, prescrito por SOP 64; equivalente RN de jsx-a11y)
-// Cambios <warn>-first permiten calibrar falsos positivos durante Wave 3.1.
-// Cuando PROFILE=LAUNCH/PROD, el gate debe correr con estas reglas en 'error'.
+//   NN #11 AI Studio Lane   -> no-console (except warn/error)
+//   NN #18 Error Handling   -> no-empty (no empty catch {})
+//   NN #21 TypeScript Strict -> no-explicit-any (error), ban-ts-comment (requires description)
+//   NN #24 Accessibility    -> react-native-a11y/* (static, prescribed by SOP 64; RN equivalent of jsx-a11y)
+// Rules start as <warn> to calibrate false positives during Wave 3.1.
+// When PROFILE=LAUNCH/PROD, the gate must run these rules as 'error'.
 //
-// Mobile usa ESLint legacy (.eslintrc.cjs) porque eslint-config-expo 55 aun
-// no soporta flat config. Mismas reglas que web/desktop, sintaxis legacy.
+// Mobile uses legacy ESLint (.eslintrc.cjs) because eslint-config-expo 55 does not
+// support flat config yet. Same rules as web/desktop, legacy syntax.
 module.exports = {
   extends: ['expo', 'plugin:react-native-a11y/all'],
   plugins: ['react-native-a11y'],
@@ -35,8 +35,8 @@ module.exports = {
         minimumDescriptionLength: 10,
       },
     ],
-    // NN #24 Accessibility (SOP 64), reglas criticas RN
-    'react-native-a11y/has-accessibility-hint': 'off', // hint es opcional
+    // NN #24 Accessibility (SOP 64), critical RN rules
+    'react-native-a11y/has-accessibility-hint': 'off', // hint is optional
     'react-native-a11y/has-accessibility-props': 'error',
     'react-native-a11y/has-valid-accessibility-role': 'error',
     'react-native-a11y/has-valid-accessibility-state': 'error',
@@ -44,7 +44,7 @@ module.exports = {
   },
   overrides: [
     {
-      // tests/ puede usar console libremente (tools/ ya esta en ignorePatterns)
+      // tests/ may use console freely (tools/ is already in ignorePatterns)
       files: ['tests/**/*.{js,ts,tsx}'],
       rules: {
         'no-console': 'off',

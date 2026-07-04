@@ -7,7 +7,7 @@ echo ""
 
 echo "=== 1/5 Backups verification ==="
 echo "Manual: open your backend dashboard (Supabase/Firebase)."
-echo "  → Database → Backups → last successful backup <24h?"
+echo "  -> Database -> Backups -> last successful backup <24h?"
 echo ""
 
 echo "=== 2/5 Bundle audit (Expo/Metro) ==="

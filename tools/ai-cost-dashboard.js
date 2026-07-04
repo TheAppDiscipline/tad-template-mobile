@@ -84,7 +84,7 @@ function main() {
     console.log('');
     console.log('Action: projected spend exceeds budget.');
     console.log('  - Audit recent sessions for opus-heavy or cache-miss patterns.');
-    console.log('  - Route more work to sonnet/haiku (see 13 - Decisiones Rápidas §Modelos).');
+    console.log('  - Route more work to sonnet/haiku (see 13 - Fast Decisions / Models).');
     console.log('  - Raise budget with DISCIPLINE_AI_BUDGET if genuinely producing value.');
   }
 }
