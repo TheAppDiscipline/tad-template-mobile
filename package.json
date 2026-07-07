@@ -60,7 +60,6 @@
     "discipline:cross-validate": "npx tsx tools/discipline/cross-validate.ts",
     "discipline:cross-validate:live": "npx tsx tools/discipline/cross-validate.ts --live",
     "discipline:test-scaffold": "npx tsx tools/discipline/test-scaffold.ts",
-    "discipline:codex-batch": "npx tsx tools/discipline/codex-batch.ts",
     "discipline:audit-merge": "npx tsx tools/discipline/audit-merge.ts",
     "discipline": "npx tsx tools/discipline/cli.ts",
     "discipline:rls-generate": "node tools/generate_rls.js",
