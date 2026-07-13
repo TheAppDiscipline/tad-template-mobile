@@ -14,6 +14,10 @@ import {
   buildGeminiJsonRequest,
   buildOpenAiJsonRequest,
 } from '../tools/llm_providers/payloads.js'
+import {
+  buildOpenAiCompatibleJsonRequest,
+  toChatCompletionsEndpoint,
+} from '../tools/llm_providers/openai-compatible.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const repoRoot = path.resolve(__dirname, '..')
@@ -239,6 +243,60 @@ test('OpenAI provider payload keeps json_object only as the no-schema compatibil
   const request = buildOpenAiJsonRequest({ model: 'model', system: 'system', input: { ping: true } })
 
   assert.deepEqual(request.response_format, { type: 'json_object' })
+})
+
+test('OpenAI-compatible providers keep JSON contracts explicit', () => {
+  const schema = {
+    type: 'object',
+    additionalProperties: false,
+    required: ['ok'],
+    properties: { ok: { type: 'boolean' } },
+  }
+
+  const strict = buildOpenAiCompatibleJsonRequest({
+    model: 'model', system: 'system', input: { ping: true }, responseSchema: schema,
+    structuredOutput: 'json_schema', strictSchema: true,
+  })
+  assert.equal(strict.response_format.json_schema.strict, true)
+  assert.deepEqual(strict.response_format.json_schema.schema, schema)
+
+  const promptOnly = buildOpenAiCompatibleJsonRequest({
+    model: 'model', system: 'system', input: { ping: true }, structuredOutput: 'prompt',
+  })
+  assert.equal('response_format' in promptOnly, false)
+  assert.match(promptOnly.messages[0].content, /Return JSON only/)
+  assert.equal(toChatCompletionsEndpoint('https://example.test/v1/'), 'https://example.test/v1/chat/completions')
+})
+
+test('ai eval accepts a draft 2020-12 schema in fixture mode', () => {
+  withTempProject((dir) => {
+    const feature = 'draft2020'
+    fs.mkdirSync(path.join(dir, 'prompts', feature), { recursive: true })
+    fs.mkdirSync(path.join(dir, 'evals'), { recursive: true })
+    fs.writeFileSync(path.join(dir, 'prompts', feature, 'system.md'), 'Return JSON only.\n', 'utf8')
+    fs.writeFileSync(path.join(dir, 'prompts', feature, 'schema.json'), JSON.stringify({
+      $schema: 'https://json-schema.org/draft/2020-12/schema',
+      type: 'object',
+      additionalProperties: false,
+      required: ['ok'],
+      properties: { ok: { type: 'boolean' } },
+    }), 'utf8')
+    fs.writeFileSync(path.join(dir, 'evals', `${feature}.jsonl`), `${JSON.stringify({
+      id: 'valid-draft2020-output',
+      input: { source: 'fixture' },
+      expected: { ok: true },
+      actual: { ok: true },
+    })}\n`, 'utf8')
+
+    const result = spawnSync(process.execPath, [path.join(repoRoot, 'tools', 'llm_eval.js'), '--mode=fixture'], {
+      cwd: dir,
+      env: process.env,
+      encoding: 'utf8',
+    })
+
+    assert.equal(result.status, 0, getOutput(result))
+    assert.match(getOutput(result), /\[PASS\] valid-draft2020-output/)
+  })
 })
 
 test('FIREBASE mobile auth uses email/password and rejects magic links', async () => {
