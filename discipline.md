@@ -11,7 +11,7 @@
 - PROJECT_NAME:
 - PRIMARY_GOAL:
 - NORTH_STAR_METRIC:
-- PROFILE:
+- PROFILE: LITE
 - BACKEND_PROVIDER: LOCAL_ONLY
 - AUTH_MODE: NONE
 - COLLAB_MODE:
@@ -27,16 +27,16 @@
 - READY_PROMOTION: per_packet
 - DOCTRINE_VERSION: 1.0
 
-### Env Configuration
+## Env Configuration
 - Backend and auth are selected in this file, then materialized by `npm run discipline:provider:generate`.
 - `.env` stores credentials only; it must not declare provider or auth mode.
 
-#### Supabase Env
+### Supabase Env
 - EXPO_PUBLIC_SUPABASE_URL
 - EXPO_PUBLIC_SUPABASE_ANON_KEY
 Rule: ANON_KEY only in frontend. Service role key never in frontend.
 
-#### Firebase Env
+### Firebase Env
 - EXPO_PUBLIC_FIREBASE_API_KEY
 - EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN
 - EXPO_PUBLIC_FIREBASE_PROJECT_ID

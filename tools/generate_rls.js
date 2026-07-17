@@ -16,7 +16,7 @@ import { parseArgs } from 'node:util';
 
 const VALID_COLLAB_MODES = ['COLLABORATIVE', 'VIEW_ONLY'];
 
-// -- CLI args ----
+// ── CLI args ────────────────────────────────────────────────────────────────
 
 const { values } = parseArgs({
   options: {
@@ -35,7 +35,7 @@ if (!values.table) {
 
 const tableName = values.table;
 
-// -- Resolve COLLAB_MODE ----
+// ── Resolve COLLAB_MODE ─────────────────────────────────────────────────────
 
 function readCollabModeFromDiscipline(root = process.cwd()) {
   const disciplinePath = path.join(root, 'discipline.md');
@@ -60,7 +60,7 @@ if (!VALID_COLLAB_MODES.includes(collabMode)) {
   process.exit(1);
 }
 
-// -- SQL generation ----
+// ── SQL generation ──────────────────────────────────────────────────────────
 
 function generateSQL(table, mode) {
   const isCollaborative = mode === 'COLLABORATIVE';
@@ -94,7 +94,7 @@ CREATE TABLE IF NOT EXISTS public.${table} (
   -- Add your columns here. Add a comma before new columns.
 );
 
--- -- Row Level Security --
+-- ── Row Level Security ──────────────────────────────────────────────────────
 
 ALTER TABLE public.${table} ENABLE ROW LEVEL SECURITY;
 
@@ -131,12 +131,12 @@ CREATE POLICY "${table}_delete" ON public.${table}
     ${deleteUsing}
   );
 
--- -- Indexes --
+-- ── Indexes ─────────────────────────────────────────────────────────────────
 
 CREATE INDEX IF NOT EXISTS idx_${table}_space_id    ON public.${table}(space_id);
 CREATE INDEX IF NOT EXISTS idx_${table}_created_by  ON public.${table}(created_by);
 
--- -- Trigger: auto-update updated_at --
+-- ── Trigger: auto-update updated_at ─────────────────────────────────────────
 
 CREATE TRIGGER set_${table}_updated_at
   BEFORE UPDATE ON public.${table}
@@ -145,7 +145,7 @@ CREATE TRIGGER set_${table}_updated_at
 `;
 }
 
-// -- Output ----
+// ── Output ──────────────────────────────────────────────────────────────────
 
 const sql = generateSQL(tableName, collabMode);
 

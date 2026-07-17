@@ -46,6 +46,7 @@
     "discipline:provider:generate": "npx tsx tools/discipline/provider-config.ts",
     "discipline:provider:check": "npx tsx tools/discipline/provider-config.ts --check && npx tsx tools/discipline/check-provider-consumers.ts",
     "discipline:patch": "npx tsx tools/discipline/apply-patch.ts",
+    "discipline:patch:dry-run": "npx tsx tools/discipline/apply-patch.ts --dry-run",
     "discipline:assemble": "npx tsx tools/discipline/assemble-paste-ready.ts",
     "discipline:progress": "npx tsx tools/discipline/update-progress.ts",
     "discipline:log": "npx tsx tools/discipline/log-run.ts",
