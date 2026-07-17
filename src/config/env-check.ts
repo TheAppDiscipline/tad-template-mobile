@@ -6,19 +6,33 @@
  * so misconfiguration surfaces as a clear error rather than a silent fallback.
  */
 
+import { resolveRuntimeConfig } from './runtime.shared.js'
+
 const env = process.env
 
 // --- Valid values ---
 const VALID_PROVIDERS = ['SUPABASE', 'FIREBASE', 'LOCAL_ONLY']
 const VALID_AUTH_MODES = ['MAGIC_LINK', 'EMAIL_PASSWORD', 'BOTH', 'NONE']
 
-const provider = (env.EXPO_PUBLIC_BACKEND_PROVIDER as string | undefined)?.trim().toUpperCase()
-const authMode = (env.EXPO_PUBLIC_AUTH_MODE as string | undefined)?.trim().toUpperCase()
+// Validate the EFFECTIVE config (what the app will actually run), not the raw env
+// vars. Reading the raw values meant an unset EXPO_PUBLIC_BACKEND_PROVIDER skipped
+// every provider-specific check while the runtime still resolved a default, so a
+// project with no .env passed env-check and then ran against a backend whose
+// required vars were never verified. One resolver, one answer.
+const resolved = resolveRuntimeConfig(env)
+const provider = resolved.BACKEND_PROVIDER
+const authMode = resolved.AUTH_MODE
+
+// The raw values still matter for typo reporting: resolveRuntimeConfig silently
+// falls back to the default on an invalid value, and a typo must not look like a
+// deliberate default.
+const rawProvider = (env.EXPO_PUBLIC_BACKEND_PROVIDER as string | undefined)?.trim().toUpperCase()
+const rawAuthMode = (env.EXPO_PUBLIC_AUTH_MODE as string | undefined)?.trim().toUpperCase()
 
 const errors: string[] = []
 
 // --- Provider must be valid if set ---
-if (provider && !VALID_PROVIDERS.includes(provider)) {
+if (rawProvider && !VALID_PROVIDERS.includes(rawProvider)) {
     errors.push(
         `EXPO_PUBLIC_BACKEND_PROVIDER="${env.EXPO_PUBLIC_BACKEND_PROVIDER}" is not valid. ` +
         `Allowed: ${VALID_PROVIDERS.join(' | ')}`
@@ -26,7 +40,7 @@ if (provider && !VALID_PROVIDERS.includes(provider)) {
 }
 
 // --- Auth mode must be valid if set ---
-if (authMode && !VALID_AUTH_MODES.includes(authMode)) {
+if (rawAuthMode && !VALID_AUTH_MODES.includes(rawAuthMode)) {
     errors.push(
         `EXPO_PUBLIC_AUTH_MODE="${env.EXPO_PUBLIC_AUTH_MODE}" is not valid. ` +
         `Allowed: ${VALID_AUTH_MODES.join(' | ')}`

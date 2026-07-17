@@ -534,6 +534,54 @@ test('env-check rejects Firebase mobile magic-link modes', () => {
   assert.equal(emailPassword.status, 0, getOutput(emailPassword))
 })
 
+// Zero config must boot. The default used to be SUPABASE, so an unset provider
+// resolved to a backend whose credentials could not be set yet, and env-check
+// skipped its checks because it read the raw (unset) var instead of the
+// effective one.
+test('env-check passes with zero config and does not demand backend credentials', () => {
+  const result = runTsxWithEnv('src/config/env-check.ts', {
+    EXPO_PUBLIC_BACKEND_PROVIDER: '',
+    EXPO_PUBLIC_AUTH_MODE: '',
+    EXPO_PUBLIC_SUPABASE_URL: '',
+    EXPO_PUBLIC_SUPABASE_ANON_KEY: '',
+  })
+
+  assert.equal(result.status, 0, getOutput(result))
+  assert.doesNotMatch(getOutput(result), /SUPABASE_URL is required/)
+})
+
+// env-check must validate the EFFECTIVE provider, not the raw env var.
+test('env-check rejects an explicit SUPABASE without credentials', () => {
+  const result = runTsxWithEnv('src/config/env-check.ts', {
+    EXPO_PUBLIC_BACKEND_PROVIDER: 'SUPABASE',
+    EXPO_PUBLIC_AUTH_MODE: 'MAGIC_LINK',
+    EXPO_PUBLIC_SUPABASE_URL: '',
+    EXPO_PUBLIC_SUPABASE_ANON_KEY: '',
+  })
+
+  assert.notEqual(result.status, 0, getOutput(result))
+  assert.match(getOutput(result), /EXPO_PUBLIC_SUPABASE_URL is required/)
+})
+
+// The .env.example is a documented step (`cp .env.example .env`); copied as-is it
+// must resolve to a provider that needs no credentials.
+test('.env.example copied as-is resolves to a credential-free provider', () => {
+  const example = fs.readFileSync(path.join(repoRoot, '.env.example'), 'utf8')
+  const env = Object.fromEntries(
+    example
+      .split(/\r?\n/)
+      .filter(line => /^\s*[A-Z]/.test(line))
+      .map(line => line.split('=', 2))
+      .map(([k, v]) => [k.trim(), (v ?? '').trim()]),
+  )
+
+  assert.equal(env.EXPO_PUBLIC_BACKEND_PROVIDER, 'LOCAL_ONLY')
+  assert.equal(env.EXPO_PUBLIC_AUTH_MODE, 'NONE')
+
+  const result = runTsxWithEnv('src/config/env-check.ts', env)
+  assert.equal(result.status, 0, getOutput(result))
+})
+
 test('discipline assemble builds feedback and hardening handoffs', () => {
   const projectRoot = createDisciplineProject({
     'POST_DEPLOY_FEEDBACK_PACKET.md': `# POST_DEPLOY_FEEDBACK_PACKET\n\nSTATUS: ready\nSOURCE_STEP: Step 6\n\n## Recommended branch\n- Step 4 feedback loop\n`,
