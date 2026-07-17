@@ -1,6 +1,6 @@
 // Build-time stub for the Firebase SDK when Firebase is NOT the active provider
 // (FINDING-06). Aliased from `firebase/app|auth|firestore` in metro.config.cjs only when
-// EXPO_PUBLIC_BACKEND_PROVIDER is not FIREBASE.
+// the generated provider contract is not FIREBASE.
 //
 // Metro eagerly bundles every dynamic-import branch in src/lib/backend/index.ts. The
 // Firebase branch only runs when the provider is FIREBASE; otherwise `firebase` is not
@@ -12,7 +12,7 @@
 
 const notInstalled = (): never => {
     throw new Error(
-        'Firebase SDK is not installed (Firebase is not the active EXPO_PUBLIC_BACKEND_PROVIDER).'
+        'Firebase SDK is not installed (Firebase is not the active generated provider).'
     )
 }
 

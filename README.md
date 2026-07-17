@@ -15,10 +15,11 @@ Template repository for building mobile applications following the **Discipline 
 1. Click **Use this template** to create a new repository.
 2. Clone your new repository.
 3. Install dependencies: `npm install`
-4. Configure your backend in `.env` using `.env.example`
-5. Run the gate: `npm run gate`
-6. Create a development build: `npx eas build --profile development --platform all`
-7. Start development for that build: `npx expo start --dev-client`
+4. Run the gate: `npm run gate`
+5. Create a development build: `npx eas build --profile development --platform all`
+6. Start development for that build: `npx expo start --dev-client`
+
+The template starts with `LOCAL_ONLY`, so no `.env` is needed for the first run. `.env` holds credentials only after you choose a cloud backend in `discipline.md`.
 
 ## Recommended Operating Mode
 
@@ -56,19 +57,25 @@ Use `discipline:patch` and `discipline:assemble` manually only as fallback.
 
 ## Backend Selection
 
-Configure in `.env` via `EXPO_PUBLIC_BACKEND_PROVIDER`:
+Choose the provider in `discipline.md`, then generate the versioned runtime contract:
+
+```bash
+npm run discipline:provider:generate
+```
+
+The initial contract is `LOCAL_ONLY` / `NONE` and works without credentials. Do not set `EXPO_PUBLIC_BACKEND_PROVIDER` or `EXPO_PUBLIC_AUTH_MODE`; those former architecture variables are rejected.
 
 | Provider | Install | Use case |
 |---|---|---|
-| **SUPABASE** (default) | `npm i @supabase/supabase-js` | Relational data + RLS security; sessions persist via Expo SecureStore |
+| **SUPABASE** | `npm i @supabase/supabase-js` | Relational data + RLS security; sessions persist via Expo SecureStore |
 | **FIREBASE** | `npm i firebase` | Firestore + Auth; sessions persist via AsyncStorage; use EMAIL_PASSWORD on Mobile |
-| **LOCAL_ONLY** | none | Rapid prototyping with AsyncStorage |
+| **LOCAL_ONLY** (initial) | none | Rapid prototyping with AsyncStorage |
 
-Verify: `npm run backend:smoke`
+After choosing a cloud provider, copy its credential example (`.env.example.supabase` or `.env.example.firebase`) to `.env`, fill the credentials, then run `npm run gate:integration`.
 
 ### Firebase Production Setup
 
-When `EXPO_PUBLIC_BACKEND_PROVIDER=FIREBASE`, install the Firebase SDK, configure `.env` from `.env.example.firebase`, and deploy the checked-in Firestore artifacts before launch/prod smoke tests:
+When `discipline.md` selects `BACKEND_PROVIDER: FIREBASE`, install the Firebase SDK, configure `.env` from `.env.example.firebase`, and deploy the checked-in Firestore artifacts before launch/prod smoke tests:
 
 ```bash
 firebase deploy --only firestore:rules,firestore:indexes
@@ -77,7 +84,7 @@ npm run firebase:smoke
 
 - Rules: `firebase/firestore.rules`
 - Indexes: `firebase/firestore.indexes.json`
-- Firebase Mobile uses `EXPO_PUBLIC_AUTH_MODE=EMAIL_PASSWORD` in this template. Magic-link auth for Firebase Mobile requires a verified HTTPS callback and is intentionally not supported by the base template.
+- Firebase Mobile uses `AUTH_MODE: EMAIL_PASSWORD` in `discipline.md`. Magic-link auth for Firebase Mobile requires a verified HTTPS callback and is intentionally not supported by the base template.
 - Firebase projects that use phone auth, dynamic links, or production quota should have billing configured before public beta.
 
 ## Mobile Runtime

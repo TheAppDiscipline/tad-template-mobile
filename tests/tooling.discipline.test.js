@@ -7,7 +7,7 @@ import { spawnSync } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
 import Ajv2020 from 'ajv/dist/2020.js'
 import addFormats from 'ajv-formats'
-import { decide as decideDbTypes, parseBackendProvider } from '../tools/check_db_types.js'
+import { decide as decideDbTypes, detectProvider } from '../tools/check_db_types.js'
 import { createFirebaseBackend } from '../src/lib/backend/firebase/backend.shared.js'
 import { createLocalBackend } from '../src/lib/backend/local/backend.shared.js'
 import {
@@ -40,6 +40,30 @@ function runTsxWithEnv(script, env) {
     env: { ...process.env, ...env },
     encoding: 'utf8',
   })
+}
+
+function runEnvCheckWithContract(contract, env) {
+  const fixture = fs.mkdtempSync(path.join(os.tmpdir(), 'env-check-contract-'))
+  const configDir = path.join(fixture, 'config')
+  fs.mkdirSync(configDir, { recursive: true })
+  for (const fileName of ['env-check.ts', 'runtime.shared.js']) {
+    fs.copyFileSync(path.join(repoRoot, 'src', 'config', fileName), path.join(configDir, fileName))
+  }
+  fs.writeFileSync(path.join(configDir, 'provider.generated.json'), JSON.stringify({
+    schema: 'discipline.provider-config/v1', ...contract,
+  }), 'utf8')
+  fs.writeFileSync(path.join(configDir, 'provider.generated.js'), `export default ${JSON.stringify({
+    schema: 'discipline.provider-config/v1', ...contract,
+  })}\n`, 'utf8')
+  try {
+    return spawnSync(process.execPath, [tsxCli, path.join(configDir, 'env-check.ts')], {
+      cwd: repoRoot,
+      env: { ...process.env, ...env },
+      encoding: 'utf8',
+    })
+  } finally {
+    fs.rmSync(fixture, { recursive: true, force: true })
+  }
 }
 
 function runNode(script, args = []) {
@@ -135,7 +159,7 @@ test('discipline assemble Step 5 includes only the context packets declared by t
   let result = runTsx('tools/discipline/assemble-paste-ready.ts', ['--step', '5', '--project-dir', projectRoot])
   assert.equal(result.status, 0, getOutput(result))
   let output = fs.readFileSync(path.join(projectRoot, '.discipline', 'paste-ready', 'step-5-input.md'), 'utf8')
-  assert.match(output, /Implementa únicamente el slice/)
+  assert.match(output, /Implement only the slice/)
   assert.doesNotMatch(output, /UI_ONLY_CONTENT|AI_ONLY_CONTENT/)
 
   fs.writeFileSync(path.join(projectRoot, '.discipline', 'packets', 'STEP_5_SLICE_PACKET.md'), '# STEP_5_SLICE_PACKET\n\nCONTEXT_PACKETS: UI_HANDOFF_PACKET\n', 'utf8')
@@ -510,7 +534,6 @@ test('LOCAL_ONLY mobile auth implements optional email/password contract determi
 
 test('env-check rejects Firebase mobile magic-link modes', () => {
   const firebaseEnv = {
-    EXPO_PUBLIC_BACKEND_PROVIDER: 'FIREBASE',
     EXPO_PUBLIC_FIREBASE_API_KEY: 'api-key',
     EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN: 'example.firebaseapp.com',
     EXPO_PUBLIC_FIREBASE_PROJECT_ID: 'example',
@@ -518,19 +541,13 @@ test('env-check rejects Firebase mobile magic-link modes', () => {
   }
 
   for (const mode of ['MAGIC_LINK', 'BOTH']) {
-    const result = runTsxWithEnv('src/config/env-check.ts', {
-      ...firebaseEnv,
-      EXPO_PUBLIC_AUTH_MODE: mode,
-    })
+    const result = runEnvCheckWithContract({ backendProvider: 'FIREBASE', authMode: mode }, firebaseEnv)
 
     assert.notEqual(result.status, 0)
     assert.match(getOutput(result), /Firebase Mobile magic link requires a verified HTTPS callback/)
   }
 
-  const emailPassword = runTsxWithEnv('src/config/env-check.ts', {
-    ...firebaseEnv,
-    EXPO_PUBLIC_AUTH_MODE: 'EMAIL_PASSWORD',
-  })
+  const emailPassword = runEnvCheckWithContract({ backendProvider: 'FIREBASE', authMode: 'EMAIL_PASSWORD' }, firebaseEnv)
   assert.equal(emailPassword.status, 0, getOutput(emailPassword))
 })
 
@@ -540,8 +557,6 @@ test('env-check rejects Firebase mobile magic-link modes', () => {
 // effective one.
 test('env-check passes with zero config and does not demand backend credentials', () => {
   const result = runTsxWithEnv('src/config/env-check.ts', {
-    EXPO_PUBLIC_BACKEND_PROVIDER: '',
-    EXPO_PUBLIC_AUTH_MODE: '',
     EXPO_PUBLIC_SUPABASE_URL: '',
     EXPO_PUBLIC_SUPABASE_ANON_KEY: '',
   })
@@ -550,11 +565,24 @@ test('env-check passes with zero config and does not demand backend credentials'
   assert.doesNotMatch(getOutput(result), /SUPABASE_URL is required/)
 })
 
+test('backend smoke passes with a generated LOCAL_ONLY contract', () => {
+  withTempProject((projectRoot) => {
+    fs.mkdirSync(path.join(projectRoot, 'src', 'config'), { recursive: true })
+    fs.writeFileSync(path.join(projectRoot, 'src', 'config', 'provider.generated.json'), JSON.stringify({
+      schema: 'discipline.provider-config/v1',
+      backendProvider: 'LOCAL_ONLY',
+      authMode: 'NONE',
+    }), 'utf8')
+
+    const result = runNode('tools/backend_smoke_test.js', ['--project-dir', projectRoot])
+    assert.equal(result.status, 0, getOutput(result))
+    assert.match(getOutput(result), /LOCAL_ONLY/)
+  })
+})
+
 // env-check must validate the EFFECTIVE provider, not the raw env var.
-test('env-check rejects an explicit SUPABASE without credentials', () => {
-  const result = runTsxWithEnv('src/config/env-check.ts', {
-    EXPO_PUBLIC_BACKEND_PROVIDER: 'SUPABASE',
-    EXPO_PUBLIC_AUTH_MODE: 'MAGIC_LINK',
+test('env-check rejects a generated SUPABASE contract without credentials', () => {
+  const result = runEnvCheckWithContract({ backendProvider: 'SUPABASE', authMode: 'MAGIC_LINK' }, {
     EXPO_PUBLIC_SUPABASE_URL: '',
     EXPO_PUBLIC_SUPABASE_ANON_KEY: '',
   })
@@ -575,8 +603,8 @@ test('.env.example copied as-is resolves to a credential-free provider', () => {
       .map(([k, v]) => [k.trim(), (v ?? '').trim()]),
   )
 
-  assert.equal(env.EXPO_PUBLIC_BACKEND_PROVIDER, 'LOCAL_ONLY')
-  assert.equal(env.EXPO_PUBLIC_AUTH_MODE, 'NONE')
+  assert.equal(env.EXPO_PUBLIC_BACKEND_PROVIDER, undefined)
+  assert.equal(env.EXPO_PUBLIC_AUTH_MODE, undefined)
 
   const result = runTsxWithEnv('src/config/env-check.ts', env)
   assert.equal(result.status, 0, getOutput(result))
@@ -1374,12 +1402,46 @@ test('check-db-types: generated == committed, tolerant of CRLF -> ok exit 0', ()
   assert.equal(r.level, 'ok')
 })
 
-test('check-db-types: parseBackendProvider ignores empty values and VITE_BACKEND_PROVIDER', () => {
-  assert.equal(parseBackendProvider('- BACKEND_PROVIDER:\n- LANE: WEB'), null)
-  assert.equal(parseBackendProvider('- BACKEND_PROVIDER: SUPABASE'), 'SUPABASE')
-  assert.equal(parseBackendProvider('- VITE_BACKEND_PROVIDER: Provider selection.'), null)
-  assert.equal(parseBackendProvider('- backend_provider = supabase'), 'SUPABASE')
-  assert.equal(parseBackendProvider('- BACKEND_PROVIDER: local-mock'), 'LOCAL-MOCK')
+test('check-db-types: reads the generated provider contract rather than environment fallbacks', () => {
+  const projectRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'discipline-provider-'))
+  fs.mkdirSync(path.join(projectRoot, 'src', 'config'), { recursive: true })
+  fs.writeFileSync(path.join(projectRoot, 'src', 'config', 'provider.generated.json'), JSON.stringify({
+    schema: 'discipline.provider-config/v1', backendProvider: 'SUPABASE', authMode: 'MAGIC_LINK',
+  }), 'utf8')
+  assert.equal(detectProvider(projectRoot), 'SUPABASE')
+  fs.rmSync(projectRoot, { recursive: true, force: true })
+})
+
+test('provider contract check rejects a stale generated artifact', () => {
+  const projectRoot = createDisciplineProject()
+  try {
+    const artifact = path.join(projectRoot, 'src', 'config', 'provider.generated.json')
+    fs.mkdirSync(path.dirname(artifact), { recursive: true })
+    fs.writeFileSync(artifact, JSON.stringify({
+      schema: 'discipline.provider-config/v1', backendProvider: 'SUPABASE', authMode: 'MAGIC_LINK',
+    }), 'utf8')
+
+    const result = runTsx('tools/discipline/provider-config.ts', ['--check', '--project-dir', projectRoot])
+    assert.notEqual(result.status, 0)
+    assert.match(getOutput(result), /provider\.generated\.json is stale/)
+  } finally {
+    fs.rmSync(projectRoot, { recursive: true, force: true })
+  }
+})
+
+test('provider consumer check rejects a new direct environment consumer', () => {
+  const projectRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'discipline-provider-consumer-'))
+  try {
+    const rogue = path.join(projectRoot, 'src', 'config', 'rogue.ts')
+    fs.mkdirSync(path.dirname(rogue), { recursive: true })
+    fs.writeFileSync(rogue, 'export const provider = import.meta.env.VITE_BACKEND_PROVIDER\n', 'utf8')
+
+    const result = runTsx('tools/discipline/check-provider-consumers.ts', ['--project-dir', projectRoot])
+    assert.notEqual(result.status, 0)
+    assert.match(getOutput(result), /src[\\/]config[\\/]rogue\.ts:1/)
+  } finally {
+    fs.rmSync(projectRoot, { recursive: true, force: true })
+  }
 })
 
 test('discipline patch matches an NFD heading against its NFC anchor', () => {

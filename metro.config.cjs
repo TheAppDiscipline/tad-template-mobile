@@ -5,9 +5,9 @@
 // in a FIREBASE/LOCAL project, or "firebase/auth" in a SUPABASE project).
 //
 // Fix (mirrors web's vite.config.ts): stub every optional module the ACTIVE provider does
-// NOT use at runtime, decided from EXPO_PUBLIC_BACKEND_PROVIDER. The stubs throw if ever
-// called, so they only resolve never-executed code; the active provider keeps its real
-// modules (which you install). Unset/invalid -> treated as LOCAL_ONLY.
+// NOT use at runtime, decided from the generated provider contract. The stubs throw if
+// ever called, so they only resolve never-executed code; the active provider keeps its
+// real modules (which you install). Runtime reads the same versioned artifact.
 //
 // Each stubbed module is used EXCLUSIVELY inside a backend provider branch:
 //   - @supabase/supabase-js            -> supabase branch only
@@ -26,7 +26,7 @@ const path = require('path')
 
 const config = getDefaultConfig(__dirname)
 
-const provider = String(process.env.EXPO_PUBLIC_BACKEND_PROVIDER || '').trim().toUpperCase()
+const provider = require('./src/config/provider.generated.json').backendProvider
 const stub = (rel) => path.resolve(__dirname, rel)
 
 const SUPABASE_STUB = stub('src/lib/backend/supabase/supabase-sdk-stub.ts')
