@@ -2,7 +2,7 @@
 
 Template repository for building mobile applications following the **Discipline Loop** methodology.
 
-**Part of The App Discipline.** This is the public, MIT-licensed template (see `LICENSE`). The complete Discipline Loop methodology and vault (full system, playbooks, prompts, and extended materials) are a separate product, sold separately at https://theappdiscipline.gumroad.com/l/tad, and are **not** included in this repository.
+**Part of The App Discipline.** This is the public, MIT-licensed template (see `LICENSE`). The complete Discipline Loop methodology and vault (full system, playbooks, prompts, and extended materials) are a separate product, sold separately at <https://theappdiscipline.gumroad.com/l/tad>, and are **not** included in this repository.
 
 **Stack:** Expo + React Native + TypeScript (strict) + Semantic design tokens
 
