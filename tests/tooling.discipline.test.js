@@ -2641,10 +2641,11 @@ test('discipline:progress is idempotent across days (stable packet fingerprint, 
 })
 
 test('discipline:progress logs a green only for an explicit gate pass (allowlist, not blocklist)', () => {
-  const gatesOf = (gateLine) => {
+  const gatesOf = (gateLines) => {
+    const lines = Array.isArray(gateLines) ? gateLines : [gateLines]
     const root = createDisciplineProject({
       'SLICE_COMPLETION_PACKET.md': ['## SLICE_COMPLETION_PACKET', '', '### Slice', '- Slice 3 - x', '',
-        '### Outcome', '- done', '', '### Gates passed', gateLine, ''].join('\n'),
+        '### Outcome', '- done', '', '### Gates passed', ...lines, ''].join('\n'),
     })
     assert.equal(runProgress(root).status, 0)
     return fs.readFileSync(path.join(root, 'progress.md'), 'utf8').match(/- \*\*Gates:\*\* (.+)/)[1]
@@ -2652,7 +2653,7 @@ test('discipline:progress logs a green only for an explicit gate pass (allowlist
   // A deferral phrase is not in any failure blocklist, but must never read as a green.
   assert.match(gatesOf('- deferred until CI credentials are available'), /^no /)
   assert.match(gatesOf('- npm run gate'), /^unverified /) // bare command is not an explicit pass
-  assert.equal(gatesOf('- npm run gate: PASS'), 'yes')
+  assert.match(gatesOf('- npm run gate: PASS'), /^unverified /) // evidence alone cannot declare green
   assert.match(gatesOf('- npm run gate: FAILED'), /^no /)
   // A negated success word must not read as a pass (the positive allowlist alone missed this).
   assert.match(gatesOf('- npm run gate: NOT PASSED'), /^no /)
@@ -2661,9 +2662,13 @@ test('discipline:progress logs a green only for an explicit gate pass (allowlist
   // Prose that merely contains a success word is never green: a green needs an explicit token.
   assert.match(gatesOf('- The release gate cannot pass due to unavailable credentials'), /^no /)
   assert.match(gatesOf('- the suite passes locally but is flaky on CI'), /^unverified /)
-  // The explicit machine-readable GATE_STATE is the source of truth; evidence prose is ignored.
+  // The explicit machine-readable GATE_STATE is the source of truth; it must be one exact,
+  // unambiguous declaration. The literal skill placeholder and conflicting declarations are not green.
   assert.equal(gatesOf('- GATE_STATE: passed'), 'yes')
   assert.match(gatesOf('- GATE_STATE: failed'), /^no /)
+  assert.match(gatesOf('- GATE_STATE: passed | failed | unverified'), /^unverified /)
+  assert.match(gatesOf('- GATE_STATE: passed but CI evidence is pending'), /^unverified /)
+  assert.match(gatesOf(['- GATE_STATE: passed', '- GATE_STATE: failed']), /^unverified /)
 })
 
 test('discipline:progress picks up an open issue added to an already-logged packet', () => {
@@ -2738,7 +2743,7 @@ test('discipline:watch does not advance the pipeline when the gate is not green 
 test('discipline:watch advances the pipeline only on a green gate', () => {
   const projectRoot = createDisciplineProject({
     'SLICE_COMPLETION_PACKET.md': ['## SLICE_COMPLETION_PACKET', '', '### Slice', '- Slice 1', '',
-      '### Outcome', '- done', '', '### Gates passed', '- npm run gate: PASS', '', '### Deploy signal', '- ready_for_preview', ''].join('\n'),
+      '### Outcome', '- done', '', '### Gates passed', '- GATE_STATE: passed', '- npm run gate: PASS', '', '### Deploy signal', '- ready_for_preview', ''].join('\n'),
   })
   const result = runHandlePacket(projectRoot)
   assert.equal(result.status, 0, getOutput(result))
@@ -2762,4 +2767,20 @@ test('discipline:watch keeps blocking across events while a non-green completion
   const pasteReadyDir = path.join(projectRoot, '.discipline', 'paste-ready')
   const files = fs.existsSync(pasteReadyDir) ? fs.readdirSync(pasteReadyDir) : []
   assert.equal(files.length, 0, `a lingering non-green completion must keep blocking, found: ${files.join(', ')}`)
+})
+
+test('discipline:watch blocks a higher-priority handoff while a non-green completion lingers', () => {
+  const projectRoot = createDisciplineProject({
+    'SLICE_COMPLETION_PACKET.md': ['## SLICE_COMPLETION_PACKET', '', '### Slice', '- Slice 1', '',
+      '### Outcome', '- done', '', '### Gates passed', '- GATE_STATE: unverified', '', '### Deploy signal', '- ready_for_preview', ''].join('\n'),
+    // detectNext gives this packet priority over SLICE_COMPLETION_PACKET (next = Step 6), which
+    // used to bypass a guard limited to the 4-reentry branch.
+    'DEPLOY_READINESS_PACKET.md': '## DEPLOY_READINESS_PACKET\n\nbody\n',
+  })
+  const result = runHandlePacket(projectRoot, 'DEPLOY_READINESS_PACKET.md')
+  assert.equal(result.status, 0, getOutput(result))
+  assert.match(getOutput(result), /Completion gate is not green/)
+  const pasteReadyDir = path.join(projectRoot, '.discipline', 'paste-ready')
+  const files = fs.existsSync(pasteReadyDir) ? fs.readdirSync(pasteReadyDir) : []
+  assert.equal(files.length, 0, `a high-priority packet must not bypass a non-green completion, found: ${files.join(', ')}`)
 })
