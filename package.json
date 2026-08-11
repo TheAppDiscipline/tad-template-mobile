@@ -16,6 +16,8 @@
     "typecheck": "tsc --noEmit",
     "test": "node --test tests/tooling.discipline.test.js",
     "check-tokens": "node tools/check_no_hex_colors.js",
+    "e2e:auth": "node tools/check_authenticated_ui.js && maestro test .maestro/authenticated",
+    "check-mobile-release": "node tools/check_mobile_release_ready.js",
     "check-secrets": "node tools/check_no_secrets_in_frontend.js",
     "check-rls": "node tools/check_rls.js",
     "check-cors": "node tools/check_cors.js",
