@@ -13,11 +13,24 @@
  * failure with the key named, and a placeholder identifier is a failure with the
  * value quoted.
  *
- * Exit 0 = the artifact declares what a build needs. Exit 1 = it does not.
+ * **Then it builds the artifact and looks at it.** Config that parses is not a
+ * bundle that exists: an import that resolves nowhere, a Metro alias that only
+ * works in dev, an asset the bundler cannot find, all leave `app.json` perfectly
+ * valid. So this runs `expo export` and checks the output the same way the Web
+ * lane's `check-bundle` runs `npm run build`, and the Extension lane's
+ * `check-bundle-extension` runs after `wxt build`.
+ *
+ * `--export-dir <dir>` inspects an export somebody else already produced (CI
+ * that builds once, or a test), instead of producing one here.
+ *
+ * Exit 0 = the artifact declares what a build needs AND the bundle came out.
+ * Exit 1 = it does not.
  */
 
 import fs from 'node:fs'
+import os from 'node:os'
 import path from 'node:path'
+import { spawnSync } from 'node:child_process'
 
 const ROOT = process.cwd()
 const appConfigPath = path.join(ROOT, 'app.json')
@@ -82,8 +95,74 @@ if (!fs.existsSync(easConfigPath)) {
     }
 }
 
+// --- The artifact itself ------------------------------------------------------
+
+/**
+ * What an Expo export has to contain to be an artifact: the manifest Metro writes
+ * and at least one non-trivial JS bundle. An export that produced no bundle is a
+ * build that shipped nothing, and it looks like success to anything that only
+ * checks the exit code.
+ */
+function inspectExport(dir) {
+    if (!fs.existsSync(dir)) {
+        fail(`the export produced no output directory (${dir}).`)
+        return
+    }
+    if (!fs.existsSync(path.join(dir, 'metadata.json'))) {
+        fail(`the export has no metadata.json in ${dir}; Metro writes it for every real export.`)
+    }
+    const bundles = []
+    const walk = (current) => {
+        for (const entry of fs.readdirSync(current, { withFileTypes: true })) {
+            const full = path.join(current, entry.name)
+            if (entry.isDirectory()) walk(full)
+            else if (/\.(hbc|js)$/.test(entry.name)) bundles.push(full)
+        }
+    }
+    walk(dir)
+    const substantial = bundles.filter((file) => fs.statSync(file).size > 1024)
+    if (substantial.length === 0) {
+        fail(
+            bundles.length === 0
+                ? 'the export contains no JS bundle at all; nothing would ship.'
+                : `the export's ${bundles.length} bundle(s) are all under 1 KB, which is not an app.`,
+        )
+    } else {
+        console.log(`[PASS] Export produced ${substantial.length} bundle(s), largest ${Math.round(Math.max(...substantial.map((f) => fs.statSync(f).size)) / 1024)} KB.`)
+    }
+}
+
+// Only build when the config is sound: exporting a project whose app.json is broken produces a
+// second, noisier failure about the same thing.
+if (!process.exitCode) {
+    const flag = process.argv.indexOf('--export-dir')
+    const provided = flag !== -1 ? process.argv[flag + 1] : null
+
+    if (provided) {
+        console.log(`[check-mobile-release] Inspecting the export at ${provided} (not building one).`)
+        inspectExport(path.resolve(provided))
+    } else {
+        const outDir = fs.mkdtempSync(path.join(os.tmpdir(), 'expo-export-'))
+        console.log('[check-mobile-release] Running expo export (this builds the artifact; it is not fast)...')
+        const exported = spawnSync(`npx expo export --platform all --output-dir "${outDir}"`, {
+            cwd: ROOT,
+            encoding: 'utf8',
+            shell: true,
+            stdio: ['ignore', 'pipe', 'pipe'],
+        })
+        if (exported.status !== 0) {
+            const detail = `${exported.stderr || ''}${exported.stdout || ''}`.trim().split(/\r?\n/).filter(Boolean).slice(-4)
+            fail('expo export failed, so this project cannot produce a deployable artifact:')
+            for (const line of detail) console.error(`         ${line}`)
+        } else {
+            inspectExport(outDir)
+        }
+        fs.rmSync(outDir, { recursive: true, force: true })
+    }
+}
+
 if (process.exitCode) {
-    console.error('Fix: update app.json (identifiers, version, assets) and eas.json build profiles, then rerun this check.')
+    console.error('Fix: update app.json (identifiers, version, assets) and eas.json build profiles, make the export succeed, then rerun this check.')
 } else {
     console.log('[PASS] Mobile deployable artifact readiness checks passed.')
 }

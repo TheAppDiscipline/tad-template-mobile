@@ -6324,6 +6324,8 @@ const MISPLACED_TEST = '.maestro/signed-in.yaml'
 // EXISTS where the runner will execute it, and refuses the two ways that verification goes missing.
 // It does not read the test's source looking for a login, because judging intent from prose is the
 // guess this pipeline refuses to make.
+const REAL_AUTH_TEST = ['appId: com.mine.app', '---', '- launchApp', ''].join('\n')
+
 test('check-authenticated-ui: no auth, or no authenticated test, is a failure', () => {
   const project = (authMode, files = {}) => {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'auth-ui-'))
@@ -6348,12 +6350,12 @@ test('check-authenticated-ui: no auth, or no authenticated test, is a failure', 
   assert.match(getOutput(empty), /no authenticated test/)
 
   // With auth and a test where the runner executes it, it passes.
-  const ready = run(project('MAGIC_LINK', { [AUTHENTICATED_TEST]: 'signed-in fixture\n' }))
+  const ready = run(project('MAGIC_LINK', { [AUTHENTICATED_TEST]: REAL_AUTH_TEST }))
   assert.equal(ready.status, 0, getOutput(ready))
-  assert.match(getOutput(ready), /1 authenticated test/)
+  assert.match(getOutput(ready), /OK:/)
 
   // And a test filed somewhere else does not count: the runner would never open it.
-  const misplaced = run(project('MAGIC_LINK', { [MISPLACED_TEST]: 'signed-in fixture\n' }))
+  const misplaced = run(project('MAGIC_LINK', { [MISPLACED_TEST]: REAL_AUTH_TEST }))
   assert.notEqual(misplaced.status, 0, getOutput(misplaced))
 })
 
@@ -6389,7 +6391,17 @@ test('check-mobile-release: the artifact is checked, not assumed', () => {
     if (eas) fs.writeFileSync(path.join(dir, 'eas.json'), JSON.stringify(eas, null, 2), 'utf8')
     return dir
   }
-  const run = (dir) => spawnSync(process.execPath, [path.join(repoRoot, 'tools', 'check_mobile_release_ready.js')], { cwd: dir, encoding: 'utf8' })
+  // The config half is what this test is about, so it inspects a ready-made export instead of
+  // building one: `expo export` takes half a minute and has its own test below.
+  const exportFixture = fs.mkdtempSync(path.join(os.tmpdir(), 'mobile-export-ok-'))
+  fs.mkdirSync(path.join(exportFixture, '_expo', 'static', 'js', 'android'), { recursive: true })
+  fs.writeFileSync(path.join(exportFixture, 'metadata.json'), '{}', 'utf8')
+  fs.writeFileSync(path.join(exportFixture, '_expo', 'static', 'js', 'android', 'app.hbc'), 'x'.repeat(200000), 'utf8')
+  const run = (dir) => spawnSync(
+    process.execPath,
+    [path.join(repoRoot, 'tools', 'check_mobile_release_ready.js'), '--export-dir', exportFixture],
+    { cwd: dir, encoding: 'utf8' },
+  )
   const REAL = { name: 'My App', version: '1.0.0', ios: { bundleIdentifier: 'com.mine.app' }, android: { package: 'com.mine.app' } }
 
   // The template's own identifiers: shipping under these is shipping as the template.
@@ -6415,4 +6427,54 @@ test('check-mobile-release: the artifact is checked, not assumed', () => {
   // A real artifact passes.
   const ready = run(project(REAL))
   assert.equal(ready.status, 0, getOutput(ready))
+})
+
+// Two JSON files are not an artifact. `check-mobile-release` validated app.json and eas.json and
+// called that a deployable artifact; nothing built anything or looked at what came out. It now runs
+// `expo export` and inspects the result, and `--export-dir` inspects one somebody else produced.
+test('check-mobile-release: the export is inspected, not assumed', () => {
+  const scratch = fs.mkdtempSync(path.join(os.tmpdir(), 'mobile-export-'))
+  const exportDir = (name, files) => {
+    const dir = path.join(scratch, name)
+    for (const [rel, content] of Object.entries(files)) {
+      fs.mkdirSync(path.join(dir, path.dirname(rel)), { recursive: true })
+      fs.writeFileSync(path.join(dir, rel), content, 'utf8')
+    }
+    if (Object.keys(files).length === 0) fs.mkdirSync(dir, { recursive: true })
+    return dir
+  }
+  // A hydrated project, so the config checks pass and the export is what decides.
+  const project = fs.mkdtempSync(path.join(os.tmpdir(), 'mobile-project-'))
+  fs.writeFileSync(path.join(project, 'app.json'), JSON.stringify({
+    expo: { name: 'My App', version: '1.0.0', ios: { bundleIdentifier: 'com.mine.app' }, android: { package: 'com.mine.app' } },
+  }, null, 2), 'utf8')
+  fs.writeFileSync(path.join(project, 'eas.json'), JSON.stringify({ build: { production: {} } }, null, 2), 'utf8')
+
+  const run = (dir) => spawnSync(process.execPath, [path.join(repoRoot, 'tools', 'check_mobile_release_ready.js'), '--export-dir', dir],
+    { cwd: project, encoding: 'utf8' })
+
+  // An export that never happened.
+  const missing = run(path.join(scratch, 'never-built'))
+  assert.notEqual(missing.status, 0, getOutput(missing))
+  assert.match(getOutput(missing), /produced no output directory/)
+
+  // A directory with a manifest and no bundle: the build "succeeded" and shipped nothing.
+  const noBundle = run(exportDir('no-bundle', { 'metadata.json': '{}' }))
+  assert.notEqual(noBundle.status, 0, getOutput(noBundle))
+  assert.match(getOutput(noBundle), /no JS bundle at all/)
+
+  // A bundle that is a stub. Size is a crude signal and a 12-byte app is not an app.
+  const tiny = run(exportDir('tiny', { 'metadata.json': '{}', '_expo/static/js/android/app.js': 'export{}\n' }))
+  assert.notEqual(tiny.status, 0, getOutput(tiny))
+  assert.match(getOutput(tiny), /under 1 KB/)
+
+  // No metadata.json: Metro writes one for every real export, so its absence means this is not one.
+  const noMeta = run(exportDir('no-meta', { '_expo/static/js/android/app.js': 'x'.repeat(4096) }))
+  assert.notEqual(noMeta.status, 0, getOutput(noMeta))
+  assert.match(getOutput(noMeta), /no metadata\.json/)
+
+  // A real-shaped export passes.
+  const ok = run(exportDir('ok', { 'metadata.json': '{}', '_expo/static/js/android/app.hbc': 'x'.repeat(200000) }))
+  assert.equal(ok.status, 0, getOutput(ok))
+  assert.match(getOutput(ok), /Export produced 1 bundle/)
 })
