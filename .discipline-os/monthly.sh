@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
-# .discipline-os/monthly.sh — Discipline Loop monthly maintenance (mobile)
+# .discipline-os/monthly.sh - Discipline Loop monthly maintenance (mobile)
 set -e
 
-echo "Discipline Loop monthly maintenance (mobile) — $(date +%Y-%m-%d)"
+echo "Discipline Loop monthly maintenance (mobile) - $(date +%Y-%m-%d)"
 echo ""
 
 echo "=== 1/5 Backups verification ==="

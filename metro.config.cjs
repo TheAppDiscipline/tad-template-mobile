@@ -1,4 +1,4 @@
-// metro.config.cjs — FINDING-06: Metro eagerly bundles every dynamic-import branch in
+// metro.config.cjs - FINDING-06: Metro eagerly bundles every dynamic-import branch in
 // src/lib/backend/index.ts (supabase | firebase | local). Provider SDKs and a couple of
 // React Native deps are installed on demand, so a single-provider bundle would otherwise
 // fail to resolve the branches it does not use (e.g. "Unable to resolve @supabase/supabase-js"

@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
-# .discipline-os/quarterly.sh — Discipline Loop quarterly maintenance (mobile)
+# .discipline-os/quarterly.sh - Discipline Loop quarterly maintenance (mobile)
 set -e
 
-echo "Discipline Loop quarterly maintenance (mobile) — $(date +%Y-%m-%d)"
+echo "Discipline Loop quarterly maintenance (mobile) - $(date +%Y-%m-%d)"
 echo "Timebox: 1 hour total."
 echo ""
 
@@ -15,8 +15,8 @@ echo ""
 echo "=== 2/4 Compliance review ==="
 echo "- Run generate-privacy-policy skill; diff vs current Privacy Policy."
 echo "- Review ROPA for vendors (Supabase, Sentry, Resend, analytics)."
-echo "- iOS ATT / Apple Privacy Nutrition Labels — still reflect reality?"
-echo "- Google Play Data Safety declaration — still accurate?"
+echo "- iOS ATT / Apple Privacy Nutrition Labels - still reflect reality?"
+echo "- Google Play Data Safety declaration - still accurate?"
 echo ""
 
 echo "=== 3/4 Tech debt inventory ==="

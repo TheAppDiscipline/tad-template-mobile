@@ -1,12 +1,36 @@
 node_modules/
 .expo/
 dist/
+# The reviewed image-size fork is vendored source, not generated app output.
+!vendor/image-size-fork/dist/
+!vendor/image-size-fork/dist/**
+# Local credentials, signing material, source maps and recovery residue
 *.jks
+*.keystore
 *.p8
 *.p12
+*.pfx
 *.key
+*.pem
+*.crt
+*.cer
+*.der
 *.mobileprovision
+id_rsa
+id_ed25519
+.npmrc
+credentials.json
+cookies.json
+auth.json
+*.map
+*.bak
+*.backup
+*.orig
 *.orig.*
+*.rej
+*.tmp
+*.temp
+*.dump
 web-build/
 .env
 .env.*
@@ -17,7 +41,7 @@ web-build/
 # Local MCP credentials and per-user server configuration
 .mcp.json
 
-# Substrate runtime state — machine-local, not project artifacts (see AGENTS.md "Substrate")
+# Substrate runtime state - machine-local, not project artifacts (see AGENTS.md "Substrate")
 .discipline/locks/
 .discipline/ledger/
 .discipline/review/

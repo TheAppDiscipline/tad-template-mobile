@@ -14,14 +14,14 @@
     "emulator/simulator; a project that does not verify UI on a device takes gate:visual out of this",
     "file, deliberately, instead of finding out it never ran."
   ],
-  "base": ["discipline:provider:check"],
+  "base": ["discipline:provider:check", "check-expo-compat", "check-vendored-deps"],
   "surfaces": {
-    "ui": ["lint", "typecheck", "test", "check-tokens", "gate:visual"],
+    "ui": ["lint", "typecheck", "test", "check-assets", "check-tokens", "gate:visual"],
     "authenticated-ui": ["lint", "typecheck", "test", "check-tokens", "check-secrets", "check-queries", "check-rls", "gate:visual", "e2e:auth", "test:rls", "test:storage:privacy"],
     "backend": ["lint", "typecheck", "test", "check-secrets", "check-rls", "check-cors", "check-https", "check-queries", "check-fk-indexes"],
     "schema": ["test", "migration:lint", "check-fk-indexes", "check-rls", "check-firebase"],
     "permissions": ["test", "check-rls", "check-firebase", "check-secrets"],
-    "deployment-artifact": ["lint", "typecheck", "test", "check-secrets", "check-https", "check-mobile-release"],
+    "deployment-artifact": ["lint", "typecheck", "test", "check-assets", "check-secrets", "check-https", "check-mobile-release"],
     "ai": ["lint", "typecheck", "test", "ai:eval"],
     "docs-only": ["discipline:validate", "test"]
   },

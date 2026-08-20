@@ -3,9 +3,10 @@
   "compilerOptions": {
     "strict": true,
     "module": "esnext",
+    "types": ["node"],
     "paths": {
       "@/*": ["./src/*"]
     }
   },
-  "exclude": ["tools", "dist", "node_modules"]
+  "exclude": ["tools", "dist", "node_modules", "vendor/image-size-fork"]
 }

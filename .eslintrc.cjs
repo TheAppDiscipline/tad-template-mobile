@@ -13,7 +13,7 @@
 module.exports = {
   extends: ['expo', 'plugin:react-native-a11y/all'],
   plugins: ['react-native-a11y'],
-  ignorePatterns: ['/dist/*', '/tools/*'],
+  ignorePatterns: ['/dist/*', '/tools/*', '/vendor/image-size-fork/*'],
   rules: {
     // Optional dependencies (firebase, supabase, async-storage, llm providers)
     // are installed only when the user configures their backend/providers.

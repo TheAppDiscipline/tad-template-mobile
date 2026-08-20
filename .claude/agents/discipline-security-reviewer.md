@@ -43,7 +43,7 @@ You are the Discipline Loop Security Reviewer subagent. Your job is to audit the
 ## Mobile-specific notes
 
 For React Native / Expo projects, additional checks:
-- Do not store tokens in `AsyncStorage` without encryption — use Expo SecureStore.
+- Do not store tokens in `AsyncStorage` without encryption - use Expo SecureStore.
 - Deep linking URLs should validate the source (no blind trust in params).
 - App Transport Security (iOS): confirm all production API calls are HTTPS only; no NSAllowsArbitraryLoads in `Info.plist`.
 

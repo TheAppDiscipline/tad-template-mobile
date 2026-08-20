@@ -1,6 +1,6 @@
 // Build-time stub for @react-native-async-storage/async-storage when the active provider
 // does NOT use it (FINDING-06). Aliased in metro.config.cjs only when
-// the generated provider contract is SUPABASE — the Local and Firebase backends DO use
+// the generated provider contract is SUPABASE - the Local and Firebase backends DO use
 // AsyncStorage, so for those it stays the real dependency (install it).
 //
 // Metro bundles the Local/Firebase branches even in a Supabase project; their AsyncStorage

@@ -2,11 +2,36 @@
 
 Template repository for building mobile applications following the **Discipline Loop** methodology.
 
-**Part of The App Discipline.** This is the public, MIT-licensed template (see `LICENSE`). The complete Discipline Loop methodology and vault (full system, playbooks, prompts, and extended materials) are a separate product, sold separately at <https://theappdiscipline.gumroad.com/l/tad>, and are **not** included in this repository.
+**Part of The App Discipline.** This template is MIT-licensed (see `LICENSE`) and can be used on its own. The proprietary Discipline Loop vault is not covered by this repository's MIT license. If you received the paid bundle, the vault is the sibling folder `The App Discipline Vault/`; otherwise, verify the current offer and availability in the seller's checkout before relying on it.
 
 **Stack:** Expo + React Native + TypeScript (strict) + Semantic design tokens
 
 **Features:** Modular Backend Factory (Supabase, Firebase, Local), quality gates, pipeline automation scripts, agent integration via `AGENTS.md` (canonical; read by Codex, Cursor, Copilot, and Claude Code via a `CLAUDE.md` stub).
+
+## Inicio rápido desde el bundle
+
+Usa esta ruta si recibiste `Templates/tad-template-mobile` dentro del bundle de The App Discipline:
+
+1. Copia esta carpeta completa a una carpeta de trabajo nueva. No trabajes dentro del bundle ni combines la copia con un proyecto anterior.
+2. Abre una terminal en la copia. El directorio correcto contiene `package.json`.
+3. Ejecuta, en orden:
+
+```bash
+npm install
+npm run discipline:hydrate -- --lane MOBILE --profile LITE --backend LOCAL_ONLY --auth NONE --sync NONE
+npm run discipline:status
+npm run gate
+```
+
+En Windows PowerShell usa `npm.cmd` en lugar de `npm`. Si ves `npm.ps1 cannot be loaded`, repite el mismo comando con `npm.cmd`; no necesitas cambiar la política del sistema.
+
+**Resultado esperado:** hydrate informa `Project hydrated`, status termina en `Status: OK` y gate vuelve al prompt sin error. Este gate demuestra lint, tipos, tests y guardianes locales. No demuestra dispositivo, development build, EAS, firma, App Store ni Play Store.
+
+**Siguiente prueba manual:** para ejecutar la app necesitas un development build, una cuenta compatible y un dispositivo o emulador; sigue `Mobile Runtime` abajo. Si no tienes esos recursos, marca el runtime como no verificado y no lo presentes como un éxito.
+
+**Si falla:** conserva el primer error rojo y el comando exacto. Corre `npm run discipline:doctor` (`npm.cmd run discipline:doctor` en PowerShell), corrige una causa a la vez y repite. Después de dos intentos sin información nueva, detente y registra el blocker en `progress.md`.
+
+Para volver otro día, lee `progress.md` y corre `npm run discipline:status`. `LITE` es local; `LAUNCH` requiere evidencia antes de abrir a terceros; `PROD` requiere operación comercial verificada. La IA no decide por ti alcance, costos, credenciales, legal/fiscal, cobros, firma ni publicación.
 
 ## Getting Started
 
@@ -101,11 +126,24 @@ Supabase magic-link auth uses the `tadapp://` scheme from `app.json`. Add `tadap
 
 Firebase Mobile magic-link auth is not a V1 template path. Use `EMAIL_PASSWORD`, or choose Supabase when mobile magic links are required.
 
+### Safe image assets
+
+Metro reads image files from the project while it creates the JavaScript bundle. Before `gate` or an export, `npm run check-assets` now verifies the real magic bytes instead of trusting the filename, rejects ICNS/HEIF/JPEG XL input, rejects files over 10 MiB, and applies conservative PNG dimension limits. The check covers image files anywhere in the project except generated, dependency, internal-state, and vendored-source directories.
+
+Do not copy an image from an unknown upload, message, ZIP, or website directly into the project. Save it outside the project first, verify its source and license, convert it with a trusted image editor to PNG/JPEG/WebP, copy the converted file into the project, and run `npm run check-assets` before `npm run gate` or `npx expo export`. A file renamed from `attack.icns` to `icon.png` is still rejected.
+
+Images downloaded by the installed app at runtime do not pass through Metro. If your app accepts remote images or user uploads, add separate download limits, content-type and magic-byte validation, storage isolation, and failure handling in that feature's slice. The template's pre-Metro check does not claim to protect a remote service or runtime upload path.
+
+The lockfile also pins a reviewed local security fork of `image-size`, the parser Metro currently invokes. Its source, compiled `dist`, MIT license, provenance, patches, tests, integrity-pinned tarball, and retirement plan are under `vendor/image-size-fork/`. Buyers do not need an account or private registry to install it; `npm ci` uses the checked-in tarball. `npm run check-vendored-deps` rebuilds that tarball from the shipped fork directory and requires its SHA-512 to match the lockfile exactly.
+
+`npm run gate` also runs Expo's official dependency-alignment check. It needs access to the npm registry so it can detect a newly recommended compatible patch instead of treating an old local SDK patch as current. If it reports an expected version, use `npx expo install <packages named by the checker>`, review the lockfile diff, then rerun the gate; do not use `npm audit fix --force` or an incompatible downgrade.
+
 ## Quality Gates
 
 ```bash
-npm run gate        # expo lint + typecheck + tests + visual token check + secrets check
-npm run gate:full   # same as gate (no bundle size check for native)
+npm run gate        # provider + Expo/fork compatibility + asset safety + lint + types + tests + local security checks
+npm run gate:full   # gate + magic-number/query scans + AI fixture evaluation
+npm run check-mobile-release # Expo export + artifact inspection (no store upload)
 ```
 
 ## Pipeline Automation (`discipline:*` scripts)

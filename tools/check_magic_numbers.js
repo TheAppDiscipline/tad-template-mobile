@@ -1,5 +1,5 @@
 /**
- * Discipline Loop Visual Gate — No Magic Numbers in UI (Mobile / React Native)
+ * Discipline Loop Visual Gate - No Magic Numbers in UI (Mobile / React Native)
  *
  * Heuristic scan for hardcoded typography / spacing / shadow values inside
  * JSX style props or StyleSheet.create blocks. Goal: catch drift from design
