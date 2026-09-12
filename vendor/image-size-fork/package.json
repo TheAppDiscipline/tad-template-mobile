@@ -1,0 +1,36 @@
+{
+  "name": "image-size",
+  "version": "2.0.3-tad.1",
+  "description": "Vendored security-maintenance fork of image-size 1.2.1 for Metro API compatibility",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "bin/image-size.js",
+    "dist",
+    "lib",
+    "LICENSE",
+    "Readme.md",
+    "SECURITY-NOTES.md"
+  ],
+  "engines": {
+    "node": ">=16.x"
+  },
+  "bin": "bin/image-size.js",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/image-size/image-size.git"
+  },
+  "license": "MIT",
+  "dependencies": {
+    "queue": "6.0.2"
+  },
+  "tadFork": {
+    "upstreamVersion": "1.2.1",
+    "upstreamCommit": "a4178fbb334ddb22d94cb4228ed597c24fd02e10",
+    "upstreamTagObject": "e786bd2353039863ee5345e9a9dfe47c96a967e9",
+    "patches": [
+      "upstream 640a67d zero-size box progress fix",
+      "TAD ICNS entry-length validation for CVE-2025-71330"
+    ]
+  }
+}

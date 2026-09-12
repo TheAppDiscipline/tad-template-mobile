@@ -1,0 +1,30 @@
+# Maestro smoke flow for Mobile (iOS + Android).
+#
+# Prerequisites:
+#   1. Maestro CLI installed: https://maestro.mobile.dev/getting-started/installing-maestro
+#      (not an npm package; it is a binary installed with curl).
+#   2. App build running on a simulator/emulator or physical device:
+#      iOS: `npx expo run:ios`
+#      Android: `npx expo run:android`
+#   3. On iOS, the default bundle id is 'com.theappdiscipline.tadAppTemplateMobile'.
+#      If you changed it in app.json, adjust the `appId` field below.
+#
+# Usage:
+#   maestro test .maestro/smoke.yaml
+#   or via npm: npm run e2e
+#
+# Limitations:
+#   - Minimal smoke. It does not test auth, sync, or complex interactions.
+#   - The template starts on an empty Stack (HomeScreen returns null), so the smoke
+#     only verifies the app launches without crashing. When you add UI in Slice 1, adjust
+#     this flow to validate the real UI.
+
+appId: com.theappdiscipline.app
+
+---
+
+- launchApp:
+    clearState: true
+- assertVisible:
+    text: "Home"
+- takeScreenshot: home-launched
